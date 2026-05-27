@@ -19,6 +19,8 @@
       --danger-dark: #a93226;
       --accent: #ffe08a;
       --accent-line: #d6ad2c;
+      --green: #1f7a4d;
+      --orange: #c77700;
     }
 
     * { box-sizing: border-box; }
@@ -284,6 +286,10 @@
       font-size: 12px;
     }
 
+    .calc-bruto { color: var(--green); font-weight: 700; }
+    .calc-aftrek { color: var(--orange); font-weight: 700; }
+    .calc-netto { color: var(--blue-dark); font-weight: 700; }
+
     @media (max-width: 900px) {
       .col-2, .col-3, .col-4, .col-6, .col-12 {
         grid-column: span 12;
@@ -491,9 +497,9 @@
     const breakMinutes = (smallBreak.checked ? 15 : 0) + (lunchBreak.checked ? 30 : 0);
     const net = Math.max(0, gross - breakMinutes / 60);
     calcPreview.innerHTML = `
-      <span class="calc-pill">Bruto: ${gross.toFixed(2)} uur</span>
-      <span class="calc-pill">Aftrek: ${breakMinutes} min</span>
-      <span class="calc-pill">Netto: ${net.toFixed(2)} uur</span>
+      <span class="calc-pill"><span class="calc-bruto">Bruto</span>: ${gross.toFixed(2)} uur</span>
+      <span class="calc-pill"><span class="calc-aftrek">Aftrek</span>: ${breakMinutes} min</span>
+      <span class="calc-pill"><span class="calc-netto">Netto</span>: ${net.toFixed(2)} uur</span>
     `;
   }
 
@@ -615,9 +621,9 @@
     const rows = visibleEntries();
     entriesTable.innerHTML = rows.map((e, i) => {
       const breakText = e.breakMinutes ? `${e.breakMinutes} min` : '-';
-      const calcText = e.type === 'Verlof gepubliceerd rooster'
-        ? `${e.grossHours.toFixed(2)} - ${(e.breakMinutes / 60).toFixed(2)} = ${e.hours.toFixed(2)}`
-        : `${e.hours.toFixed(2)}`;
+      const calcHtml = e.type === 'Verlof gepubliceerd rooster'
+        ? `<span class="calc-bruto">${e.grossHours.toFixed(2)}</span> - <span class="calc-aftrek">${(e.breakMinutes / 60).toFixed(2)}</span> = <span class="calc-netto">${e.hours.toFixed(2)}</span>`
+        : `<span class="calc-netto">${e.hours.toFixed(2)}</span>`;
 
       return `
         <tr>
@@ -627,7 +633,7 @@
           <td>${e.start || '-'}</td>
           <td>${e.end || '-'}</td>
           <td>${breakText}</td>
-          <td>${calcText}</td>
+          <td>${calcHtml}</td>
           <td>${e.hours.toFixed(2)}</td>
           <td><button class="danger" onclick="removeEntry(${i})">Verwijderen</button></td>
         </tr>
