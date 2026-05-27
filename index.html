@@ -359,6 +359,7 @@
             <span>Lunch <span class="small">(30 min aftrek)</span></span>
           </label>
         </div>
+        <div class="calc-line" id="calcPreview"></div>
       </div>
 
       <div class="field col-12">
@@ -387,6 +388,7 @@
         <th>Start</th>
         <th>Eind</th>
         <th>Aftrek</th>
+        <th>Berekening</th>
         <th>Uren</th>
         <th>Actie</th>
       </tr>
@@ -416,6 +418,7 @@
   const shiftEnd = document.getElementById('shiftEnd');
   const smallBreak = document.getElementById('smallBreak');
   const lunchBreak = document.getElementById('lunchBreak');
+  const calcPreview = document.getElementById('calcPreview');
 
   const addBtn = document.getElementById('addBtn');
   const exportBtn = document.getElementById('exportBtn');
@@ -479,9 +482,30 @@
     publishedRosterOptions.classList.toggle('hidden', !published);
   }
 
-  inputMode.addEventListener('change', updateVisibility);
-  leaveType.addEventListener('change', updateVisibility);
+  function updatePreview() {
+    if (leaveType.value !== 'Verlof gepubliceerd rooster') {
+      calcPreview.innerHTML = '';
+      return;
+    }
+    const gross = (shiftStart.value && shiftEnd.value) ? calcHours(shiftStart.value, shiftEnd.value) : 0;
+    const breakMinutes = (smallBreak.checked ? 15 : 0) + (lunchBreak.checked ? 30 : 0);
+    const net = Math.max(0, gross - breakMinutes / 60);
+    calcPreview.innerHTML = `
+      <span class="calc-pill">Bruto: ${gross.toFixed(2)} uur</span>
+      <span class="calc-pill">Aftrek: ${breakMinutes} min</span>
+      <span class="calc-pill">Netto: ${net.toFixed(2)} uur</span>
+    `;
+  }
+
+  [inputMode, leaveType, shiftStart, shiftEnd, smallBreak, lunchBreak].forEach(el => {
+    el.addEventListener('change', () => {
+      updateVisibility();
+      updatePreview();
+    });
+    el.addEventListener('input', updatePreview);
+  });
   updateVisibility();
+  updatePreview();
 
   function isDuplicateEntry(candidate) {
     return entries.some(e => {
@@ -589,18 +613,26 @@
 
   function renderTable() {
     const rows = visibleEntries();
-    entriesTable.innerHTML = rows.map((e, i) => `
-      <tr>
-        <td>${formatDateWithDay(e.date)}</td>
-        <td>${e.type}</td>
-        <td>${e.kind}</td>
-        <td>${e.start || '-'}</td>
-        <td>${e.end || '-'}</td>
-        <td>${e.breakMinutes ? `${e.breakMinutes} min` : '-'}</td>
-        <td>${e.hours.toFixed(2)}</td>
-        <td><button class="danger" onclick="removeEntry(${i})">Verwijderen</button></td>
-      </tr>
-    `).join('');
+    entriesTable.innerHTML = rows.map((e, i) => {
+      const breakText = e.breakMinutes ? `${e.breakMinutes} min` : '-';
+      const calcText = e.type === 'Verlof gepubliceerd rooster'
+        ? `${e.grossHours.toFixed(2)} - ${(e.breakMinutes / 60).toFixed(2)} = ${e.hours.toFixed(2)}`
+        : `${e.hours.toFixed(2)}`;
+
+      return `
+        <tr>
+          <td>${formatDateWithDay(e.date)}</td>
+          <td>${e.type}</td>
+          <td>${e.kind}</td>
+          <td>${e.start || '-'}</td>
+          <td>${e.end || '-'}</td>
+          <td>${breakText}</td>
+          <td>${calcText}</td>
+          <td>${e.hours.toFixed(2)}</td>
+          <td><button class="danger" onclick="removeEntry(${i})">Verwijderen</button></td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function buildCalendar() {
@@ -646,9 +678,13 @@
 
   function downloadCSV() {
     const dayHours = workdayHours();
-    const rows = [['Datum', 'Verlofsoort', 'Type', 'Start', 'Eind', 'Aftrek', 'Bruto uren', 'Netto uren', 'Dagen']];
+    const rows = [['Datum', 'Verlofsoort', 'Type', 'Start', 'Eind', 'Aftrek', 'Berekening', 'Uren', 'Dagen']];
 
     visibleEntries().forEach(e => {
+      const calcText = e.type === 'Verlof gepubliceerd rooster'
+        ? `${e.grossHours.toFixed(2)} - ${(e.breakMinutes / 60).toFixed(2)} = ${e.hours.toFixed(2)}`
+        : `${e.hours.toFixed(2)}`;
+
       rows.push([
         formatDateWithDay(e.date),
         e.type,
@@ -656,7 +692,7 @@
         e.start || '',
         e.end || '',
         e.breakMinutes ? `${e.breakMinutes} min` : '',
-        e.grossHours ? e.grossHours.toFixed(2) : '',
+        calcText,
         e.hours.toFixed(2),
         (e.hours / dayHours).toFixed(2)
       ]);
@@ -707,6 +743,7 @@
     renderSummary();
     renderTable();
     buildCalendar();
+    updatePreview();
   }
 
   render();
