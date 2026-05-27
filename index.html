@@ -178,18 +178,6 @@
 
     <label for="shiftEnd">Shift eind</label>
     <input type="time" id="shiftEnd" />
-
-    <span class="small">Alleen verplicht bij “Verlof gepubliceerd rooster”</span>
-  </div>
-
-  <div id="hoursFields" class="row">
-    <label for="startTime">Start</label>
-    <input type="time" id="startTime" />
-
-    <label for="endTime">Eind</label>
-    <input type="time" id="endTime" />
-
-    <span class="small">Gebruik dit alleen als je losse uren wilt toevoegen.</span>
   </div>
 
   <div class="row">
@@ -230,12 +218,9 @@
   const dateToWrap = document.getElementById('dateToWrap');
   const daysPerWeek = document.getElementById('daysPerWeek');
   const publishedRosterFields = document.getElementById('publishedRosterFields');
-  const hoursFields = document.getElementById('hoursFields');
 
   const shiftStart = document.getElementById('shiftStart');
   const shiftEnd = document.getElementById('shiftEnd');
-  const startTime = document.getElementById('startTime');
-  const endTime = document.getElementById('endTime');
 
   const addBtn = document.getElementById('addBtn');
   const resetBtn = document.getElementById('resetBtn');
