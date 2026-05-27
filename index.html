@@ -299,8 +299,17 @@
         <input type="time" id="shiftEnd" />
       </div>
 
+      <div class="field col-12 hidden" id="publishedRosterOptions">
+        <div class="field">
+          <label><input type="checkbox" id="smallBreak" /> Kleine pauze (15 min aftrek)</label>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="lunchBreak" /> Lunch (30 min aftrek)</label>
+        </div>
+      </div>
+
       <div class="field col-12">
-        <span class="small">Verlof/Verlof feestdag: 1 regel per datum. Verlof gepubliceerd rooster: meerdere blokken per datum toegestaan, maar geen exacte dubbels.</span>
+        <span class="small">Verlof/Verlof feestdag: 1 regel per datum. Verlof gepubliceerd rooster: meerdere blokken per datum toegestaan, geen exacte dubbels. Pauzes/lunch alleen bij gepubliceerd rooster en worden afgetrokken.</span>
       </div>
 
       <div class="field col-12">
@@ -324,6 +333,7 @@
         <th>Type</th>
         <th>Start</th>
         <th>Eind</th>
+        <th>Aftrek</th>
         <th>Uren</th>
         <th>Actie</th>
       </tr>
@@ -348,8 +358,11 @@
 
   const publishedRosterFields = document.getElementById('publishedRosterFields');
   const publishedRosterFields2 = document.getElementById('publishedRosterFields2');
+  const publishedRosterOptions = document.getElementById('publishedRosterOptions');
   const shiftStart = document.getElementById('shiftStart');
   const shiftEnd = document.getElementById('shiftEnd');
+  const smallBreak = document.getElementById('smallBreak');
+  const lunchBreak = document.getElementById('lunchBreak');
 
   const addBtn = document.getElementById('addBtn');
   const exportBtn = document.getElementById('exportBtn');
@@ -410,6 +423,7 @@
     const published = leaveType.value === 'Verlof gepubliceerd rooster';
     publishedRosterFields.classList.toggle('hidden', !published);
     publishedRosterFields2.classList.toggle('hidden', !published);
+    publishedRosterOptions.classList.toggle('hidden', !published);
   }
 
   inputMode.addEventListener('change', updateVisibility);
@@ -420,16 +434,16 @@
     return entries.some(e => {
       if (e.date !== candidate.date || e.type !== candidate.type) return false;
       if (e.type === 'Verlof gepubliceerd rooster') {
-        return e.start === candidate.start && e.end === candidate.end;
+        return e.start === candidate.start && e.end === candidate.end && e.breakMinutes === candidate.breakMinutes;
       }
       return true;
     });
   }
 
-  function addEntry(date, type, kind, start = '', end = '', hours = 0) {
+  function addEntry(date, type, kind, start = '', end = '', breakMinutes = 0, hours = 0) {
     if (!isWorkday(new Date(date))) return;
 
-    const candidate = { date, type, kind, start, end, hours };
+    const candidate = { date, type, kind, start, end, breakMinutes, hours };
     if (isDuplicateEntry(candidate)) return;
 
     entries.push(candidate);
@@ -454,14 +468,18 @@
       const sStart = shiftStart.value;
       const sEnd = shiftEnd.value;
       if (!sStart || !sEnd) return alert('Vul shift begin en shift eind in.');
-      const hours = calcHours(sStart, sEnd);
-      if (hours <= 0) return alert('Shift eind moet na shift begin liggen.');
 
-      dates.forEach(date => addEntry(date, type, 'Gedeeltelijke dag', sStart, sEnd, hours));
+      const gross = calcHours(sStart, sEnd);
+      if (gross <= 0) return alert('Shift eind moet na shift begin liggen.');
+
+      const breakMinutes = (smallBreak.checked ? 15 : 0) + (lunchBreak.checked ? 30 : 0);
+      const netHours = Math.max(0, gross - breakMinutes / 60);
+
+      dates.forEach(date => addEntry(date, type, 'Gedeeltelijke dag', sStart, sEnd, breakMinutes, netHours));
       return;
     }
 
-    dates.forEach(date => addEntry(date, type, 'Volledige dag', '', '', workdayHours()));
+    dates.forEach(date => addEntry(date, type, 'Volledige dag', '', '', 0, workdayHours()));
   });
 
   resetBtn.addEventListener('click', () => {
@@ -479,6 +497,7 @@
       e.type === target.type &&
       e.start === target.start &&
       e.end === target.end &&
+      e.breakMinutes === target.breakMinutes &&
       e.hours === target.hours
     );
     if (realIndex !== -1) entries.splice(realIndex, 1);
@@ -524,6 +543,7 @@
         <td>${e.kind}</td>
         <td>${e.start || '-'}</td>
         <td>${e.end || '-'}</td>
+        <td>${e.breakMinutes ? `${e.breakMinutes} min` : '-'}</td>
         <td>${e.hours.toFixed(2)}</td>
         <td><button class="danger" onclick="removeEntry(${i})">Verwijderen</button></td>
       </tr>
@@ -573,7 +593,7 @@
 
   function downloadCSV() {
     const dayHours = workdayHours();
-    const rows = [['Datum', 'Verlofsoort', 'Type', 'Start', 'Eind', 'Uren', 'Dagen']];
+    const rows = [['Datum', 'Verlofsoort', 'Type', 'Start', 'Eind', 'Aftrek', 'Uren', 'Dagen']];
 
     visibleEntries().forEach(e => {
       rows.push([
@@ -582,6 +602,7 @@
         e.kind,
         e.start || '',
         e.end || '',
+        e.breakMinutes ? `${e.breakMinutes} min` : '',
         e.hours.toFixed(2),
         (e.hours / dayHours).toFixed(2)
       ]);
@@ -613,14 +634,16 @@
         alert('Vul eerst shift begin en shift eind in.');
         return;
       }
-      const hours = calcHours(sStart, sEnd);
-      if (hours <= 0) {
+      const gross = calcHours(sStart, sEnd);
+      if (gross <= 0) {
         alert('Shift eind moet na shift begin liggen.');
         return;
       }
-      addEntry(dateStr, type, 'Gedeeltelijke dag', sStart, sEnd, hours);
+      const breakMinutes = (smallBreak.checked ? 15 : 0) + (lunchBreak.checked ? 30 : 0);
+      const netHours = Math.max(0, gross - breakMinutes / 60);
+      addEntry(dateStr, type, 'Gedeeltelijke dag', sStart, sEnd, breakMinutes, netHours);
     } else {
-      addEntry(dateStr, type, 'Volledige dag', '', '', workdayHours());
+      addEntry(dateStr, type, 'Volledige dag', '', '', 0, workdayHours());
     }
   };
 
