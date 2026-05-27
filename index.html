@@ -376,6 +376,16 @@
     return date.toISOString().split('T')[0];
   }
 
+  function dayLabel(dateStr) {
+    const d = new Date(dateStr);
+    const labels = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+    return labels[d.getDay()];
+  }
+
+  function formatDateWithDay(dateStr) {
+    return `${dateStr} (${dayLabel(dateStr)})`;
+  }
+
   function isWorkday(dateObj) {
     const day = dateObj.getDay();
     return day >= 1 && day <= 5;
@@ -450,7 +460,13 @@
   function removeEntry(index) {
     const filtered = visibleEntries();
     const target = filtered[index];
-    const realIndex = entries.findIndex(e => e.date === target.date && e.type === target.type && e.start === target.start && e.end === target.end && e.hours === target.hours);
+    const realIndex = entries.findIndex(e =>
+      e.date === target.date &&
+      e.type === target.type &&
+      e.start === target.start &&
+      e.end === target.end &&
+      e.hours === target.hours
+    );
     if (realIndex !== -1) entries.splice(realIndex, 1);
     render();
   }
@@ -489,7 +505,7 @@
     const rows = visibleEntries();
     entriesTable.innerHTML = rows.map((e, i) => `
       <tr>
-        <td>${e.date}</td>
+        <td>${formatDateWithDay(e.date)}</td>
         <td>${e.type}</td>
         <td>${e.kind}</td>
         <td>${e.start || '-'}</td>
@@ -547,7 +563,7 @@
 
     visibleEntries().forEach(e => {
       rows.push([
-        e.date,
+        formatDateWithDay(e.date),
         e.type,
         e.kind,
         e.start || '',
