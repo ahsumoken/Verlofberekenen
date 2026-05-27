@@ -147,6 +147,31 @@
       color: var(--muted);
     }
 
+    .break-box {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 8px 0 0;
+    }
+
+    .break-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      min-width: 180px;
+    }
+
+    .break-item input {
+      width: auto;
+      margin: 0;
+      accent-color: var(--blue);
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -239,12 +264,36 @@
       font-size: 11px;
     }
 
+    .calc-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .calc-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eef4ff;
+      border: 1px solid #cfe0ff;
+      color: #2459b5;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
     @media (max-width: 900px) {
       .col-2, .col-3, .col-4, .col-6, .col-12 {
         grid-column: span 12;
       }
 
       .button-row button {
+        width: 100%;
+      }
+
+      .break-item {
         width: 100%;
       }
     }
@@ -300,11 +349,15 @@
       </div>
 
       <div class="field col-12 hidden" id="publishedRosterOptions">
-        <div class="field">
-          <label><input type="checkbox" id="smallBreak" /> Kleine pauze (15 min aftrek)</label>
-        </div>
-        <div class="field">
-          <label><input type="checkbox" id="lunchBreak" /> Lunch (30 min aftrek)</label>
+        <div class="break-box">
+          <label class="break-item">
+            <input type="checkbox" id="smallBreak" />
+            <span>Kleine pauze <span class="small">(15 min aftrek)</span></span>
+          </label>
+          <label class="break-item">
+            <input type="checkbox" id="lunchBreak" />
+            <span>Lunch <span class="small">(30 min aftrek)</span></span>
+          </label>
         </div>
       </div>
 
@@ -440,10 +493,10 @@
     });
   }
 
-  function addEntry(date, type, kind, start = '', end = '', breakMinutes = 0, hours = 0) {
+  function addEntry(date, type, kind, start = '', end = '', breakMinutes = 0, hours = 0, grossHours = 0) {
     if (!isWorkday(new Date(date))) return;
 
-    const candidate = { date, type, kind, start, end, breakMinutes, hours };
+    const candidate = { date, type, kind, start, end, breakMinutes, hours, grossHours };
     if (isDuplicateEntry(candidate)) return;
 
     entries.push(candidate);
@@ -475,11 +528,11 @@
       const breakMinutes = (smallBreak.checked ? 15 : 0) + (lunchBreak.checked ? 30 : 0);
       const netHours = Math.max(0, gross - breakMinutes / 60);
 
-      dates.forEach(date => addEntry(date, type, 'Gedeeltelijke dag', sStart, sEnd, breakMinutes, netHours));
+      dates.forEach(date => addEntry(date, type, 'Gedeeltelijke dag', sStart, sEnd, breakMinutes, netHours, gross));
       return;
     }
 
-    dates.forEach(date => addEntry(date, type, 'Volledige dag', '', '', 0, workdayHours()));
+    dates.forEach(date => addEntry(date, type, 'Volledige dag', '', '', 0, workdayHours(), workdayHours()));
   });
 
   resetBtn.addEventListener('click', () => {
@@ -593,7 +646,7 @@
 
   function downloadCSV() {
     const dayHours = workdayHours();
-    const rows = [['Datum', 'Verlofsoort', 'Type', 'Start', 'Eind', 'Aftrek', 'Uren', 'Dagen']];
+    const rows = [['Datum', 'Verlofsoort', 'Type', 'Start', 'Eind', 'Aftrek', 'Bruto uren', 'Netto uren', 'Dagen']];
 
     visibleEntries().forEach(e => {
       rows.push([
@@ -603,6 +656,7 @@
         e.start || '',
         e.end || '',
         e.breakMinutes ? `${e.breakMinutes} min` : '',
+        e.grossHours ? e.grossHours.toFixed(2) : '',
         e.hours.toFixed(2),
         (e.hours / dayHours).toFixed(2)
       ]);
@@ -641,9 +695,9 @@
       }
       const breakMinutes = (smallBreak.checked ? 15 : 0) + (lunchBreak.checked ? 30 : 0);
       const netHours = Math.max(0, gross - breakMinutes / 60);
-      addEntry(dateStr, type, 'Gedeeltelijke dag', sStart, sEnd, breakMinutes, netHours);
+      addEntry(dateStr, type, 'Gedeeltelijke dag', sStart, sEnd, breakMinutes, netHours, gross);
     } else {
-      addEntry(dateStr, type, 'Volledige dag', '', '', 0, workdayHours());
+      addEntry(dateStr, type, 'Volledige dag', '', '', 0, workdayHours(), workdayHours());
     }
   };
 
