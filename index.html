@@ -17,7 +17,6 @@
       --gray-dark: #555;
       --danger: #c0392b;
       --danger-dark: #a93226;
-      --soft: #f3f6fb;
       --accent: #ffe08a;
       --accent-line: #d6ad2c;
     }
@@ -294,7 +293,7 @@
       </div>
 
       <div class="field col-12">
-        <span class="small">1 dag = weekuren / 5</span>
+        <span class="small">1 dag = weekuren / 5. Weekenddagen worden niet meegeteld in datumreeksen.</span>
       </div>
 
       <div class="field col-12">
@@ -370,12 +369,19 @@
     return date.toISOString().split('T')[0];
   }
 
+  function isWorkday(dateObj) {
+    const day = dateObj.getDay();
+    return day >= 1 && day <= 5;
+  }
+
   function datesBetween(startStr, endStr) {
     const result = [];
     const start = new Date(startStr);
     const end = new Date(endStr);
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      result.push(formatDateISO(new Date(d)));
+      const current = new Date(d);
+      if (!isWorkday(current)) continue;
+      result.push(formatDateISO(current));
     }
     return result;
   }
@@ -550,6 +556,9 @@
 
   window.pickDay = function(dateStr) {
     const type = leaveType.value;
+    const d = new Date(dateStr);
+
+    if (!isWorkday(d)) return;
 
     if (type === 'Verlof gepubliceerd rooster') {
       const sStart = shiftStart.value;
