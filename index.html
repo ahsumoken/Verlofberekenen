@@ -139,7 +139,7 @@
 <body>
 <div class="container">
   <h1>Verlof Calculator</h1>
-  <p>Voer volledige verlofdagen, losse uren of verlof op gepubliceerd rooster in. Je kunt ook een datumreeks toevoegen.</p>
+  <p>Voer volledige verlofdagen of verlof op gepubliceerd rooster in. Je kunt ook een datumreeks toevoegen.</p>
 
   <div class="row">
     <label for="leaveType">Verlofsoort</label>
@@ -182,6 +182,7 @@
 
   <div class="row">
     <button id="addBtn">Toevoegen</button>
+    <button id="exportBtn" class="secondary">Export CSV</button>
     <button id="resetBtn" class="secondary">Alles wissen</button>
   </div>
 
@@ -223,6 +224,7 @@
   const shiftEnd = document.getElementById('shiftEnd');
 
   const addBtn = document.getElementById('addBtn');
+  const exportBtn = document.getElementById('exportBtn');
   const resetBtn = document.getElementById('resetBtn');
   const entriesTable = document.getElementById('entriesTable');
   const summary = document.getElementById('summary');
@@ -290,7 +292,6 @@
       return;
     }
 
-    // Verlof / Verlof feestdag = volledige dag
     dates.forEach(date => addEntry(date, type, 'Volledige dag', '', '', workdayHours()));
   });
 
@@ -387,6 +388,39 @@
 
     calendar.innerHTML = html.join('');
   }
+
+  function downloadCSV() {
+    const dayHours = workdayHours();
+    const rows = [
+      ['Datum', 'Verlofsoort', 'Type', 'Start', 'Eind', 'Uren', 'Dagen']
+    ];
+
+    entries.forEach(e => {
+      rows.push([
+        e.date,
+        e.type,
+        e.kind,
+        e.start || '',
+        e.end || '',
+        e.hours.toFixed(2),
+        (e.hours / dayHours).toFixed(2)
+      ]);
+    });
+
+    const csv = rows
+      .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'verlof-export.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  exportBtn.addEventListener('click', downloadCSV);
 
   window.pickDay = function(dateStr) {
     const type = leaveType.value;
